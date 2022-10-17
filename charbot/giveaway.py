@@ -173,7 +173,7 @@ class GiveawayView(ui.View):
 
     # noinspection PyUnusedLocal
     @ui.button(label="Bid", style=discord.ButtonStyle.green)
-    async def bid(self, interaction: discord.Interaction, button: ui.Button) -> None:  # skipcq: PYL-W0613
+    async def bid(self, interaction: discord.Interaction, button: ui.Button) -> None:    # skipcq: PYL-W0613
         """Increase or make the initial bid for a user.
 
         Parameters
@@ -185,7 +185,7 @@ class GiveawayView(ui.View):
         """
         if self.message is None:
             self.message = interaction.message
-        if not any(role.id in ALLOWED_ROLES for role in interaction.user.roles):  # type: ignore
+        if all(role.id not in ALLOWED_ROLES for role in interaction.user.roles):  # type: ignore
             await interaction.response.send_message(
                 "You must be at least level 5 to participate in the giveaways system and be in <#969972085445238784>.",
                 ephemeral=True,
@@ -212,7 +212,7 @@ class GiveawayView(ui.View):
 
     # noinspection PyUnusedLocal
     @ui.button(label="Check", style=discord.ButtonStyle.blurple, disabled=True)
-    async def check(self, interaction: discord.Interaction, button: ui.Button) -> None:  # skipcq: PYL-W0613
+    async def check(self, interaction: discord.Interaction, button: ui.Button) -> None:    # skipcq: PYL-W0613
         """Check the current bid for a user.
 
         Parameters
@@ -222,7 +222,7 @@ class GiveawayView(ui.View):
         button : ui.Button
             The button that was pressed.
         """
-        if not any(role.id in ALLOWED_ROLES for role in interaction.user.roles):  # type: ignore
+        if all(role.id not in ALLOWED_ROLES for role in interaction.user.roles):  # type: ignore
             await interaction.response.send_message(
                 "You must be at least level 5 to participate in the giveaways system and be in <#969972085445238784>.",
                 ephemeral=True,
@@ -402,7 +402,9 @@ class Giveaway(commands.Cog):
         ctx : commands.Context
             The context of the command invocation.
         """
-        if ctx.guild is None or not any(role.id in ALLOWED_ROLES for role in ctx.author.roles):  # type: ignore
+        if ctx.guild is None or all(
+            role.id not in ALLOWED_ROLES for role in ctx.author.roles
+        ):  # type: ignore
             await ctx.send(
                 "You must be at least level 5 to participate in the giveaways system and be in "
                 "a thread of <#969972085445238784>.",
@@ -444,7 +446,9 @@ class Giveaway(commands.Cog):
         ctx : commands.Context
             The context of the command invocation.
         """
-        if ctx.guild is None or not any(role.id in ALLOWED_ROLES for role in ctx.author.roles):  # type: ignore
+        if ctx.guild is None or all(
+            role.id not in ALLOWED_ROLES for role in ctx.author.roles
+        ):  # type: ignore
             await ctx.send(
                 "You must be at least level 5 to participate in the giveaways system and be in "
                 "a thread of <#969972085445238784>.",

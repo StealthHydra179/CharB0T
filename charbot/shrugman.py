@@ -130,8 +130,8 @@ class Shrugman(commands.Cog):
         assert isinstance(channel, discord.TextChannel)  # skipcq: BAN-B101
         if (
             interaction.guild is None
-            or not any(role.id in ALLOWED_ROLES for role in interaction.user.roles)  # type: ignore
-            or not channel.id == CHANNEL_ID
+            or all(role.id not in ALLOWED_ROLES for role in interaction.user.roles)
+            or channel.id != CHANNEL_ID
         ):
             await interaction.response.send_message(
                 "You must be at least level 5 to participate in the giveaways system and be in "

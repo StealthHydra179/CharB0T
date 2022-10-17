@@ -197,8 +197,7 @@ class PrimaryFunctions(Cog):
         ):
             member = message.mentions[0] if message.mentions else None
             mentioned_id = None
-            search = re.search(r"<@!?(\d+)>\B", message.content)
-            if search:
+            if search := re.search(r"<@!?(\d+)>\B", message.content):
                 mentioned_id = int(search.groups()[0])  # type: ignore
             if member and member.joined_at:  # type: ignore
                 delta = (utcnow() - member.joined_at).total_seconds()  # type: ignore
@@ -214,7 +213,10 @@ class PrimaryFunctions(Cog):
             else:
                 time_string = "None Found"
             print(member)
-            member = member if member else await self.bot.fetch_user(mentioned_id) if mentioned_id else None
+            member = member or (
+                await self.bot.fetch_user(mentioned_id) if mentioned_id else None
+            )
+
             print(member)
             if member:
                 await (await self.bot.fetch_channel(430197357100138497)).send(  # type: ignore

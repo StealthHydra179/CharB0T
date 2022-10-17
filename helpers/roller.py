@@ -40,10 +40,7 @@ def roll(arg: str) -> str:
         "perfect integer, positive or negative, "
         "connected with `+`, and no spaces."
     )
-    if "+" in arg:
-        dice = arg.split("+")
-    else:
-        dice = [str(arg)]
+    dice = arg.split("+") if "+" in arg else [arg]
     try:
         sums = 0
         rolls = []
@@ -53,14 +50,12 @@ def roll(arg: str) -> str:
                     num_rolls = int(die[: die.find("d")])
                 except ValueError:
                     num_rolls = 1
-                i = 1
-                while i <= num_rolls:
+                for _ in range(1, num_rolls + 1):
                     # fmt: off
                     roll1 = random.randint(1, int(die[die.find("d") + 1:]))
                     # fmt: on
                     rolls.append(roll1)
                     sums += roll1
-                    i += 1
             else:
                 try:
                     rolls.append(int(die))
@@ -69,7 +64,7 @@ def roll(arg: str) -> str:
                     return roll_error
         output = "`"
         for roll1 in rolls:
-            output += str(roll1) + ", "
+            output += f"{str(roll1)}, "
         output = output[:-2]
         return f"rolled `{arg}` got {output}` for a total value of: {str(sums)}"
     except Exception:  # skipcq: PYL-W0703

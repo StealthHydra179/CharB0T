@@ -111,16 +111,12 @@ def default_field(dictionary: dict[int, dict[str, str | bool]], add_time: dateti
     item : dict
         The item to add to the dictionary.
     """
-    dictionary.update(
-        {
-            timegm(add_time.utctimetuple()): {
-                "value": f"{format_dt(add_time, 'F')}\n"
-                f"[({add_time.astimezone(chartime).strftime(time_format)})]({ytLink})",
-                "name": item["summary"],
-                "inline": True,
-            }
-        }
-    )
+    dictionary[timegm(add_time.utctimetuple())] = {
+        "value": f"{format_dt(add_time, 'F')}\n"
+        f"[({add_time.astimezone(chartime).strftime(time_format)})]({ytLink})",
+        "name": item["summary"],
+        "inline": True,
+    }
 
 
 # noinspection GrazieInspection
@@ -214,17 +210,14 @@ class Calendar(commands.Cog):
             if "description" not in item.keys():
                 default_field(fields, sub_time, item)
             elif url(item["description"]):
-                fields.update(
-                    {
-                        timegm(sub_time.utctimetuple()): {
-                            "name": f"{item['summary']}",
-                            "value": f"{format_dt(sub_time, 'F')}\n"
-                            f"[({sub_time.astimezone(chartime).strftime(time_format)})"
-                            f"]({item['description']})",
-                            "inline": True,
-                        }
-                    }
-                )
+                fields[timegm(sub_time.utctimetuple())] = {
+                    "name": f"{item['summary']}",
+                    "value": f"{format_dt(sub_time, 'F')}\n"
+                    f"[({sub_time.astimezone(chartime).strftime(time_format)})"
+                    f"]({item['description']})",
+                    "inline": True,
+                }
+
             else:
                 default_field(fields, sub_time, item)
         for sub_time in cancelled_times:

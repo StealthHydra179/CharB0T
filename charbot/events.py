@@ -93,7 +93,12 @@ class Events(Cog):
                 color=Color.red(),
                 timestamp=datetime.now(tz=timezone.utc),
             )
-            embed.add_field(name="Words Found:", value=", ".join(used_words)[0:1024], inline=True)
+            embed.add_field(
+                name="Words Found:",
+                value=", ".join(used_words)[:1024],
+                inline=True,
+            )
+
             embed.add_field(
                 name="Author:",
                 value=f"{message.author.display_name}: " f"{message.author.name}#{message.author.discriminator}",
@@ -136,59 +141,63 @@ class Events(Cog):
         message : discord.Message
             The message sent to the websocket from discord.
         """
-        if message.content is not None and not message.author.bot:
-            await self.sensitive_scan(message)
-            if message.guild is None:
-                channel = await self.bot.fetch_channel(906578081496584242)
-                await channel.send(  # type: ignore
-                    message.author.mention,
-                    allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=False),
-                )
-                await channel.send(  # type: ignore
-                    message.content,
-                    allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=False),
-                )
-                await message.channel.send(
-                    "Hi! If this was an attempt to reach the mod team through modmail,"
-                    " that has been removed, in favor of "
-                    "mod support, which you can find in <#398949472840712192>"
-                )
-                return
-            if not any(
-                role.id
-                in [
-                    338173415527677954,
-                    253752685357039617,
-                    225413350874546176,
-                    387037912782471179,
-                    406690402956083210,
-                    729368484211064944,
-                ]
-                for role in message.author.roles  # type: ignore
-            ) and any(item in message.content for item in [f"<@&{message.guild.id}>", "@everyone", "@here"]):
-                await message.author.add_roles(  # type: ignore
-                    discord.Object(id=676250179929636886),
-                    discord.Object(id=684936661745795088),
-                )
-                await message.delete()
-                channel = await self.bot.fetch_channel(426016300439961601)
-                embed = Embed(
-                    description=message.content,
-                    title="Mute: Everyone/Here Ping sent by non mod",
-                    color=Color.red(),
-                ).set_footer(
-                    text=f"Sent by {message.author.display_name}-{message.author.id}",
-                    icon_url=message.author.avatar.url,  # type: ignore
-                )
-                await channel.send(embed=embed)  # type: ignore
-            if message.author.bot or not message.content:
-                return
-            if re.search(r"~~:.|:;~~", message.content, re.MULTILINE | re.IGNORECASE) or re.search(
-                r"tilde tilde colon dot vertical bar colon semicolon tilde tilde",
+        if message.content is None or message.author.bot:
+            return
+        await self.sensitive_scan(message)
+        if message.guild is None:
+            channel = await self.bot.fetch_channel(906578081496584242)
+            await channel.send(  # type: ignore
+                message.author.mention,
+                allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=False),
+            )
+            await channel.send(  # type: ignore
                 message.content,
-                re.MULTILINE | re.IGNORECASE,
-            ):
-                await message.delete()
+                allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=False),
+            )
+            await message.channel.send(
+                "Hi! If this was an attempt to reach the mod team through modmail,"
+                " that has been removed, in favor of "
+                "mod support, which you can find in <#398949472840712192>"
+            )
+            return
+        if all(
+            role.id
+            not in [
+                338173415527677954,
+                253752685357039617,
+                225413350874546176,
+                387037912782471179,
+                406690402956083210,
+                729368484211064944,
+            ]
+            for role in message.author.roles
+        ) and any(
+            item in message.content
+            for item in [f"<@&{message.guild.id}>", "@everyone", "@here"]
+        ):
+            await message.author.add_roles(  # type: ignore
+                discord.Object(id=676250179929636886),
+                discord.Object(id=684936661745795088),
+            )
+            await message.delete()
+            channel = await self.bot.fetch_channel(426016300439961601)
+            embed = Embed(
+                description=message.content,
+                title="Mute: Everyone/Here Ping sent by non mod",
+                color=Color.red(),
+            ).set_footer(
+                text=f"Sent by {message.author.display_name}-{message.author.id}",
+                icon_url=message.author.avatar.url,  # type: ignore
+            )
+            await channel.send(embed=embed)  # type: ignore
+        if message.author.bot or not message.content:
+            return
+        if re.search(r"~~:.|:;~~", message.content, re.MULTILINE | re.IGNORECASE) or re.search(
+            r"tilde tilde colon dot vertical bar colon semicolon tilde tilde",
+            message.content,
+            re.MULTILINE | re.IGNORECASE,
+        ):
+            await message.delete()
 
     @Cog.listener()
     async def on_command_error(self, ctx, error):

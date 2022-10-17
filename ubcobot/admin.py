@@ -215,14 +215,11 @@ class Admin(Cog):
         with open("UBCbot.json", encoding="utf8") as file:
             words: list[str] = json.load(file)["Words"]
         content = message.content.lower().split()
-        used_slurs = set()
-        joinstring = ", "
-        for word in content:
-            if word in words:
-                used_slurs.add(word)
-        if used_slurs != set() and not any(
-            role.id in [832521484378308660, 832521484378308659, 832521484378308658]
-            for role in message.author.roles  # type: ignore
+        used_slurs = {word for word in content if word in words}
+        if used_slurs != set() and all(
+            role.id
+            not in [832521484378308660, 832521484378308659, 832521484378308658]
+            for role in message.author.roles
         ):
             await message.delete()
             await message.author.add_roles(  # type: ignore
@@ -230,6 +227,7 @@ class Admin(Cog):
                 discord.Object(id=930953847411736598),
                 reason="Used a Slur",
             )
+            joinstring = ", "
             await (await self.bot.fetch_channel(832521484828147741)).send(  # type: ignore
                 embed=Embed(
                     title=f"[SLUR] {message.author.name}#" f"{message.author.discriminator}",

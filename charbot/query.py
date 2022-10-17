@@ -71,8 +71,9 @@ class Query(Cog):
         """
         if ctx.guild is None:
             return False
-        return not any(
-            role.id in (684936661745795088, 676250179929636886) for role in ctx.author.roles  # type: ignore
+        return all(
+            role.id not in (684936661745795088, 676250179929636886)
+            for role in ctx.author.roles
         ) or any(
             role.id in (338173415527677954, 253752685357039617, 225413350874546176)
             for role in ctx.author.roles  # type: ignore

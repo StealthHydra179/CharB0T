@@ -107,10 +107,13 @@ class ModSupport(Cog, app_commands.Group, name="modsupport", description="mod su
         """Remove stale modmail channels."""
         guild = await self.bot.fetch_guild(225345178955808768)
         channels = await guild.fetch_channels()
-        cared: list[discord.TextChannel] = []
-        for channel in channels:
-            if channel.name.endswith("mod-support") and isinstance(channel, discord.TextChannel):
-                cared.append(channel)
+        cared: list[discord.TextChannel] = [
+            channel
+            for channel in channels
+            if channel.name.endswith("mod-support")
+            and isinstance(channel, discord.TextChannel)
+        ]
+
         for channel in cared:
             temp = True
             async for message in channel.history(after=utcnow() - timedelta(days=3)):
@@ -160,47 +163,37 @@ class ModSupport(Cog, app_commands.Group, name="modsupport", description="mod su
             User to change
         """
         if await edit_check(interaction):
+            successful = False
+            with open("mod_support_blacklist.json", "r", encoding="utf8") as file:
+                modmail_blacklist = json.load(file)
             if add:
-                successful = False
-                with open("mod_support_blacklist.json", "r", encoding="utf8") as file:
-                    modmail_blacklist = json.load(file)
                 if user.id not in modmail_blacklist["blacklisted"]:
                     modmail_blacklist["blacklisted"].append(user.id)
                     with open("mod_support_blacklist.json", "w", encoding="utf8") as file:
                         json.dump(modmail_blacklist, file)
                     successful = True
-            else:
-                successful = False
-                with open("mod_support_blacklist.json", "r", encoding="utf8") as file:
-                    modmail_blacklist = json.load(file)
-                if user.id in modmail_blacklist["blacklisted"]:
-                    modmail_blacklist["blacklisted"].remove(user.id)
-                    with open("mod_support_blacklist.json", "w", encoding="utf8") as file:
-                        json.dump(modmail_blacklist, file)
-                    successful = True
+            elif user.id in modmail_blacklist["blacklisted"]:
+                modmail_blacklist["blacklisted"].remove(user.id)
+                with open("mod_support_blacklist.json", "w", encoding="utf8") as file:
+                    json.dump(modmail_blacklist, file)
+                successful = True
             if add and successful:
                 await interaction.response.send_message(
                     f"<@{user.id}> successfully added to the blacklist", ephemeral=True
                 )
-            elif add and not successful:
+            elif add:
                 await interaction.response.send_message(
                     f"Error: <@{user.id}> was already on the blacklist" f" or was not able to be added to.",
                     ephemeral=True,
                 )
-            elif not add and successful:
+            elif successful:
                 await interaction.response.send_message(
                     f"<@{user.id}> successfully removed from the blacklist",
                     ephemeral=True,
                 )
-            elif not add and not successful:
-                await interaction.response.send_message(
-                    f"<@{user.id}> was not on the blacklist or was" f" not able to be removed from it.",
-                    ephemeral=True,
-                )
             else:
                 await interaction.response.send_message(
-                    "Error: unkown issue occured. If you're seeing this,"
-                    " ping bluesy, something has gone very wrong.",
+                    f"<@{user.id}> was not on the blacklist or was" f" not able to be removed from it.",
                     ephemeral=True,
                 )
         else:
@@ -363,9 +356,10 @@ class ModSupportButtons(ui.View):
             interaction.user: PermissionOverwrite(view_channel=True, send_messages=True, read_messages=True),
         }
         for uid in select.values:
-            perms.update(
-                {self.mods[uid]: PermissionOverwrite(view_channel=True, send_messages=True, read_messages=True)}
+            perms[self.mods[uid]] = PermissionOverwrite(
+                view_channel=True, send_messages=True, read_messages=True
             )
+
         await interaction.response.send_modal(
             ModSupportModal(perms, f"{select.placeholder}-{interaction.user.name}-mod-support")
         )

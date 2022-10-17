@@ -207,9 +207,8 @@ class TicTacHard(TicTacABC):
         list[list[str]]
             The cleared board.
         """
-        board = [["blur" for _ in range(self.dim_sz)] for _ in range(self.dim_sz)]
         # made a 3x3 by-default board
-        return board
+        return [["blur" for _ in range(self.dim_sz)] for _ in range(self.dim_sz)]
 
     @property
     def letter(self) -> str:
@@ -254,13 +253,13 @@ class TicTacHard(TicTacABC):
         # User is Player#1 ;
         # Check set 1 -> row and '\' diagonal & Check set 2 -> col and '/' diagonal
 
-        for i in range(0, self.dim_sz):  # Rows
+        for i in range(self.dim_sz):  # Rows
             flag11 = True
             flag21 = True
 
             flag12 = True
             flag22 = True
-            for j in range(0, self.dim_sz):
+            for j in range(self.dim_sz):
 
                 ch2 = self.board[i][j]
                 ch1 = self.board[j][i]
@@ -292,7 +291,7 @@ class TicTacHard(TicTacABC):
 
         flag12 = True
         flag22 = True
-        for i in range(0, self.dim_sz):
+        for i in range(self.dim_sz):
 
             ch2 = self.board[i][i]
             ch1 = self.board[i][self.dim_sz - 1 - i]
@@ -315,10 +314,7 @@ class TicTacHard(TicTacABC):
 
         if flag11 or flag12:
             return 1
-        if flag21 or flag22:
-            return 0
-
-        return -1
+        return 0 if flag21 or flag22 else -1
 
     def move(self, x: int, y: int) -> bool:
         """Record a move.
@@ -336,9 +332,7 @@ class TicTacHard(TicTacABC):
             True if the move was successful, False otherwise.
         """
         move = self._move_record(x, y)
-        if isinstance(move, bool):
-            return move
-        return False
+        return move if isinstance(move, bool) else False
 
     def display(self) -> discord.File:
         """Return an image of the board.
@@ -351,8 +345,8 @@ class TicTacHard(TicTacABC):
         grid = Image.open("media/tictactoe/grid.png", "r").convert("RGBA")
         cross = Image.open("media/tictactoe/X.png", "r")
         circle = Image.open("media/tictactoe/O.png", "r")
-        for i in range(0, self.dim_sz):
-            for j in range(0, self.dim_sz):
+        for i in range(self.dim_sz):
+            for j in range(self.dim_sz):
                 if self.board[i][j] == "X":
                     grid.paste(cross, PilOffsets[GridPositions(f"({i}, {j})").name].value, cross)
                 elif self.board[i][j] == "O":
@@ -409,10 +403,11 @@ class TicTacHard(TicTacABC):
             A list of available moves.
         """
         available_moves = []
-        for i in range(0, self.dim_sz):
-            for j in range(0, self.dim_sz):
-                if self.board[i][j] == "blur":
-                    available_moves.append((i, j))
+        for i in range(self.dim_sz):
+            available_moves.extend(
+                (i, j) for j in range(self.dim_sz) if self.board[i][j] == "blur"
+            )
+
         return available_moves
 
     def _empty_squares(self) -> int:
@@ -424,8 +419,8 @@ class TicTacHard(TicTacABC):
             The number of empty squares.
         """
         empty_squares = 0
-        for i in range(0, self.dim_sz):
-            for j in range(0, self.dim_sz):
+        for i in range(self.dim_sz):
+            for j in range(self.dim_sz):
                 if self.board[i][j] == "blur":
                     empty_squares += 1
         return empty_squares
@@ -465,20 +460,17 @@ class TicTacHard(TicTacABC):
             self.board[possible_move[0]][possible_move[1]] = "blur"
             sim_score["position"] = possible_move  # this represents the move optimal next move
 
-            if player == max_player:  # X is max player
-                sim_score_val = sim_score["score"]
-                best_val = best["score"]
-                assert isinstance(sim_score_val, (float, int))  # skipcq: BAN-B101
-                assert isinstance(best_val, (float, int))  # skipcq: BAN-B101
-                if sim_score_val > best_val:
-                    best = sim_score
-            else:
-                sim_score_val = sim_score["score"]
-                best_val = best["score"]
-                assert isinstance(sim_score_val, (float, int))  # skipcq: BAN-B101
-                assert isinstance(best_val, (float, int))  # skipcq: BAN-B101
-                if sim_score_val < best_val:
-                    best = sim_score
+            sim_score_val = sim_score["score"]
+            best_val = best["score"]
+            if (
+                player == max_player
+                and sim_score_val > best_val
+                or player != max_player
+                and sim_score_val < best_val
+            ):
+                best = sim_score
+            assert isinstance(best_val, (float, int))  # skipcq: BAN-B101
+            assert isinstance(sim_score_val, (float, int))  # skipcq: BAN-B101
         return best
 
 
@@ -518,11 +510,9 @@ class TicTacEasy(TicTacHard):
         """
         available_moves = []  # will carry all available moves
         player_win_spot = []  # if player (user Wins)
-        comp_pick = "O"
-        if self.pick == "O":
-            comp_pick = "X"
-        for i in range(0, self.dim_sz):
-            for j in range(0, self.dim_sz):
+        comp_pick = "X" if self.pick == "O" else "O"
+        for i in range(self.dim_sz):
+            for j in range(self.dim_sz):
                 if self.board[i][j] == "blur":  # BLANK
                     t = (i, j)
                     available_moves.append(t)  # add it to available moves
@@ -548,13 +538,13 @@ class TicTacEasy(TicTacHard):
             if self.board[2][2] == "blur":
                 self.board[2][2] = comp_pick
                 return 2, 2
-        if len(player_win_spot) != 0:
+        if player_win_spot:
             self.board[player_win_spot[0][0]][player_win_spot[0][1]] = comp_pick
             return player_win_spot[0][0], player_win_spot[0][1]
         if len(available_moves) == 1:
             self.board[available_moves[0][0]][available_moves[0][1]] = comp_pick
             return [available_moves[0][0]], [available_moves[0][1]]
-        if len(available_moves) == 0:
+        if not available_moves:
             return -1, -1
 
         c1, c2 = self.dim_sz // 2, self.dim_sz // 2
@@ -580,7 +570,7 @@ class TicTacEasy(TicTacHard):
 
             # Four Lines
 
-            for j in range(0, gap):
+            for j in range(gap):
                 if (c1 - gap, c2 - gap + j) in available_moves:  # TOP LEFT TO TOP RIGHT
                     self.board[c1 - gap][c2 - gap + j] = comp_pick
                     return c1 - gap, c2 - gap + j
@@ -590,9 +580,6 @@ class TicTacEasy(TicTacHard):
                 ) in available_moves:  # BOTTOM LEFT TO BOTTOM RIGHT
                     self.board[c1 + gap][c2 - gap + j] = comp_pick
                     return c1 + gap, c2 - gap + j
-                if (c1 - gap, c2 - gap) in available_moves:  # LEFT TOP TO LEFT BOTTOM
-                    self.board[c1 - gap + j][c2 - gap] = comp_pick
-                    return c1 - gap + j, c2 - gap
                 if (
                     c1 - gap + j,
                     c2 + gap,
@@ -680,16 +667,16 @@ class TicTacView(ui.View):
     def display(self) -> None:
         """DOCSTRING."""
         line1 = ""
-        for i in range(0, 3):
-            for j in range(0, 2):
+        for i in range(3):
+            for j in range(2):
                 if self.puzzle.board[i][j] == "blur":
-                    line1 = line1 + "    |"
+                    line1 = f"{line1}    |"
                 else:
-                    line1 = line1 + "  " + self.puzzle.board[i][j] + " |"
+                    line1 = f"{line1}  {self.puzzle.board[i][j]} |"
             if self.puzzle.board[i][3 - 1] == "blur":
                 line1 = line1 + "    \n"
             else:
-                line1 = line1 + "  " + self.puzzle.board[i][3 - 1] + " \n"
+                line1 = f"{line1}  {self.puzzle.board[i][3 - 1]}" + " \n"
         print(line1, "\n\n")
 
     async def move(self, interaction: discord.Interaction, button: ui.Button, x: int, y: int) -> None:
@@ -956,8 +943,8 @@ class TicTacCog(commands.Cog):
         assert isinstance(channel, discord.TextChannel)  # skipcq: BAN-B101
         if (
             interaction.guild is None
-            or not any(role.id in ALLOWED_ROLES for role in interaction.user.roles)  # type: ignore
-            or not channel.id == CHANNEL_ID
+            or all(role.id not in ALLOWED_ROLES for role in interaction.user.roles)
+            or channel.id != CHANNEL_ID
         ):
             await interaction.response.send_message(
                 "You must be at least level 5 to participate in the giveaways system and be in "

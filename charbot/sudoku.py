@@ -138,9 +138,7 @@ class Cell:
     @property
     def possible_values(self) -> set[int]:
         """Possible values for the cell, as thought by the user."""
-        if not self._editable:
-            return set()
-        return self._possible_values
+        return self._possible_values if self._editable else set()
 
     @possible_values.setter
     def possible_values(self, values: set[int]) -> None:
@@ -325,7 +323,7 @@ class Block:
     def __init__(self, cells: list[Cell]):
         if len(cells) != 9:
             raise ValueError("Block must have exactly 9 cells.")
-        self._row1 = cells[0:3]
+        self._row1 = cells[:3]
         self._row2 = cells[3:6]
         self._row3 = cells[6:9]
 
@@ -434,7 +432,7 @@ class Puzzle:
     def __str__(self):
         """Return the puzzle as a string."""
         base = 3
-        side = base * base
+        side = base**2
         expand_line: Callable[[str], str] = lambda x: x[0] + x[5:9].join([x[1:5] * (base - 1)] * base) + x[9:13]
 
         line0 = expand_line("╔═══╤═══╦═══╗")
@@ -444,9 +442,9 @@ class Puzzle:
         line4 = expand_line("╚═══╧═══╩═══╝")
 
         symbol = " 1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        static = "\u001b[1;37m" if not self._mobile else ""
-        selected = "\u001b[4;40m" if not self._mobile else ""
-        clear = "\u001b[0m" if not self._mobile else ""
+        static = "" if self._mobile else "\u001b[1;37m"
+        selected = "" if self._mobile else "\u001b[4;40m"
+        clear = "" if self._mobile else "\u001b[0m"
         symbols = [
             [""]
             + [
@@ -502,8 +500,8 @@ class Puzzle:
         if solution is None:
             _solutions = self.shortSudokuSolve(self._initial_puzzle)
             solution = next(_solutions, None)
-            if solution is None:
-                raise AttributeError("No solution found.")
+        if solution is None:
+            raise AttributeError("No solution found.")
         return Puzzle(solution, self._mobile)
 
     @classmethod
@@ -538,9 +536,7 @@ class Puzzle:
         """
         rows = []
         for i in range(9):
-            row = []
-            for column in columns:
-                row.append(column.cells[i].value)
+            row = [column.cells[i].value for column in columns]
             rows.append(row)
         return cls(rows)
 
@@ -554,7 +550,7 @@ class Puzzle:
             A new puzzle.
         """
         base = 3
-        side = base * base
+        side = base**2
 
         # pattern for a baseline valid solution
         pattern = lambda r, c: (base * (r % base) + r // base + c) % side  # noqa: E731
@@ -565,7 +561,7 @@ class Puzzle:
         r_base = range(base)
         rows = [g * base + r for g in shuffle(r_base) for r in shuffle(r_base)]
         cols = [g * base + c for g in shuffle(r_base) for c in shuffle(r_base)]
-        nums = shuffle(range(1, base * base + 1))
+        nums = shuffle(range(1, base**2 + 1))
 
         # produce board using randomized baseline pattern
         board = [[nums[pattern(r, c)] for c in cols] for r in rows]
@@ -608,11 +604,16 @@ class Puzzle:
             (n, k): {
                 (g, n)
                 for g in (n > 0)
-                * [k // size, size + k % size, 2 * size + k % size // block + k // size // block * block]
+                * [
+                    k // size,
+                    size + k % size,
+                    2 * size + k % size // block + k // size // block * block,
+                ]
             }
-            for k in range(size * size)
+            for k in range(size**2)
             for n in range(size + 1)
         }
+
         _empties = [i for i, n in enumerate(board) if n == 0]
         used = set().union(*(span[n, _p] for _p, n in enumerate(board) if n))  # type: ignore
         empty = 0
@@ -625,10 +626,7 @@ class Puzzle:
             used |= span[board[pos], pos]  # type: ignore
             empty += 1 if board[pos] else -1
             if empty == len(_empties):
-                # fmt: off
-                _solution = [board[r:r + size] for r in range(0, size * size, size)]
-                # fmt: on
-                yield _solution
+                yield [board[r:r + size] for r in range(0, size**2, size)]
                 empty -= 1
 
     def location_of_cell(self, cell: Cell) -> str:
@@ -653,16 +651,24 @@ class Puzzle:
         """
         if not isinstance(cell, Cell):
             raise TypeError("cell must be of type Cell")
-        row_index = -1
-        for i, row in enumerate(self.rows):
-            if cell.id in [cell.id for cell in row.cells]:
-                row_index = i
-                break
-        column_index = -1
-        for j, column in enumerate(self.columns):
-            if cell.id in [cell.id for cell in column.cells]:
-                column_index = j
-                break
+        row_index = next(
+            (
+                i
+                for i, row in enumerate(self.rows)
+                if cell.id in [cell.id for cell in row.cells]
+            ),
+            -1,
+        )
+
+        column_index = next(
+            (
+                j
+                for j, column in enumerate(self.columns)
+                if cell.id in [cell.id for cell in column.cells]
+            ),
+            -1,
+        )
+
         if -1 in (row_index, column_index):
             raise ValueError("Cell not found in puzzle")
         return f"row {row_index + 1}, column {column_index + 1}"
@@ -1018,7 +1024,7 @@ class SudokuGame(ui.View):
                     else:
                         self.update_keypad()
                         await interaction.response.edit_message(embed=self.cell_choose_embed(), view=self)
-                elif self.cell.editable and self.noting_mode:
+                elif self.cell.editable:
                     if int(button.label) not in self.cell.possible_values:  # type: ignore
                         self.cell.possible_values.add(int(button.label))  # type: ignore
                     else:
@@ -1354,8 +1360,8 @@ class Sudoku(commands.Cog):
         assert isinstance(channel, discord.TextChannel)  # skipcq: BAN-B101
         if (
             interaction.guild is None
-            or not any(role.id in ALLOWED_ROLES for role in interaction.user.roles)  # type: ignore
-            or not channel.id == CHANNEL_ID
+            or all(role.id not in ALLOWED_ROLES for role in interaction.user.roles)
+            or channel.id != CHANNEL_ID
         ):
             await interaction.response.send_message(
                 "You must be at least level 5 to participate in the giveaways system and be in "
